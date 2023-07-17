@@ -27,13 +27,14 @@ var RPC_ADDRS = []string{
 }
 
 const BucketName = "bucket0"
-const Path = "./TEST_FILES/"
+const Path = "./TEST_FILES"
 
-// const FileName = "153_9mb.mp4"
-const FileName = "8_4mb.jpg"
+// const FileName = "154MB.mp4"
+const FileName = "8MB.jpg"
 
 var Workspace = "./CESS_STORAGE"
 var Port = 4001
+
 var Bootstrap = []string{
 	"_dnsaddr.boot-kldr-testnet.cess.cloud", // Testnet
 	// "_dnsaddr.bootstrap-kldr.cess.cloud", // Devnet
@@ -61,14 +62,21 @@ func main() {
 		panic(err)
 	}
 
-	keyringPair, _ := signature.KeyringPairFromSecret(MY_MNEMONIC, 0)
+	keyringPair, err := signature.KeyringPairFromSecret(MY_MNEMONIC, 0)
+	if err != nil {
+		panic(err)
+	}
 
 	if !utils.CheckBucketName(BucketName) {
 		panic("invalid bucket name")
 	}
 
 	// Create Bucket
-	bucketList, _ := sdk.QueryAllBucketName(keyringPair.PublicKey)
+	bucketList, err := sdk.QueryAllBucketName(keyringPair.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+
 	if !containsBucket(bucketList, BucketName) {
 		fmt.Println("Creating bucket...")
 		fmt.Println(sdk.CreateBucket(keyringPair.PublicKey, BucketName))
@@ -77,39 +85,71 @@ func main() {
 	// Upload File
 	fmt.Println("Uploading File...")
 	start := time.Now()
-	fileHash, _ := sdk.StoreFile(keyringPair.PublicKey, Path+FileName, BucketName)
+	fileHash, err := sdk.StoreFile(Path+"/"+FileName, BucketName)
+	fmt.Println("Error: ", err)
 	fmt.Println(fileHash, ", Uploaded in: ", time.Since(start))
 
-	// Download File
-	fmt.Println("Querying File...")
-	start = time.Now()
-	fmt.Println(sdk.RetrieveFile(fileHash, Workspace+"/downloaded"+FileName), ", Request Completed in: ", time.Since(start))
+	// Store File hashes in a file for future reference.
+	myfile, err := os.OpenFile(Workspace+"/filehashes.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer myfile.Close()
 
-	storageOrder, _ := sdk.QueryStorageOrder(fileHash)
-	fmt.Println("Storage Order: ", storageOrder)
+	loc, _ := time.LoadLocation("Asia/Kolkata")
+
+	// Write the string to the file
+	_, err = myfile.WriteString(fileHash + " " + time.Now().In(loc).String() + "\n")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	start = time.Now()
+
+	fmt.Println("Querrying Bucket Info...")
 	for {
-		fmt.Println("Querrying Bucket Info...")
-		bucketInfo, _ := sdk.QueryBucketInfo(keyringPair.PublicKey, BucketName)
+		bucketInfo, err := sdk.QueryBucketInfo(keyringPair.PublicKey, BucketName)
+		if err != nil {
+			panic(err)
+		}
 
 		if containsFilehash(bucketInfo.ObjectsList, fileHash) {
-			fmt.Println("Filehash found in: ", time.Since(start))
+			fmt.Println("File Uploaded in: ", time.Since(start))
+
+			// Download File
+			fmt.Println("Downloading File...")
+			start = time.Now()
+			err := sdk.RetrieveFile(fileHash, Workspace+"/"+fileHash+FileName)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("File Dwonloaded in: ", time.Since(start))
+
 			break
+		} else {
+			storageOrder, err := sdk.QueryStorageOrder(fileHash)
+			fmt.Println("File hash: ", fileHash)
+			fmt.Println("Storage Order: ", storageOrder)
+			if err != nil {
+				fmt.Println("Failed to query StorageDeal ", err)
+				break
+			}
 		}
-		fmt.Println("Filehash not found!")
-		time.Sleep(10 * time.Second)
+		// Hash not found try again after 10 sec
+		time.Sleep(30 * time.Second)
 	}
 }
 
-func containsFilehash(s []pattern.FileHash, str string) bool {
-	var hash pattern.FileHash
-	for i := 0; i < len(hash); i++ {
-		hash[i] = types.U8(str[i])
+func containsFilehash(hashes []pattern.FileHash, hash string) bool {
+	var h pattern.FileHash
+	for i := 0; i < len(h); i++ {
+		h[i] = types.U8(hash[i])
 	}
 
-	for _, v := range s {
-		if v == hash {
+	for _, v := range hashes {
+		if v == h {
 			return true
 		}
 	}
