@@ -19,21 +19,25 @@ import (
 // Substrate well-known mnemonic:
 //
 //	https://github.com/substrate-developer-hub/substrate-developer-hub.github.io/issues/613
-var MY_MNEMONIC = "<ENTER_YOUR_MNEMONIC_HERE>"
+var MY_MNEMONIC = "student clean pool trophy height arrive token bargain grit sponsor inquiry visit"
 
 var RPC_ADDRS = []string{
 	"wss://testnet-rpc0.cess.cloud/ws/",
 	"wss://testnet-rpc1.cess.cloud/ws/",
 }
 
-const BucketName = "bucket0"
 const Path = "./TEST_FILES"
 
-// const FileName = "154MB.mp4"
-const FileName = "8MB.jpg"
+var FileNames = []string{"8MB.jpg", "154MB.mp4"}
+
+const BucketName = "bucket"
 
 var Workspace = "./CESS_STORAGE"
-var Port = 4001
+var Port = 4004
+
+var GatewayURL = "http://deoss-pub-gateway.cess.cloud/"
+
+// var GatewayAccAddress = "cXhwBytXqrZLr1qM5NHJhCzEMckSTzNKw17ci2aHft6ETSQm9"
 
 var Bootstrap = []string{
 	"_dnsaddr.boot-kldr-testnet.cess.cloud", // Testnet
@@ -82,13 +86,71 @@ func main() {
 		fmt.Println(sdk.CreateBucket(keyringPair.PublicKey, BucketName))
 	}
 
-	// Upload File
-	fmt.Println("Uploading File...")
-	start := time.Now()
-	fileHash, err := sdk.StoreFile(Path+"/"+FileName, BucketName)
-	fmt.Println("Error: ", err)
-	fmt.Println(fileHash, ", Uploaded in: ", time.Since(start))
+	// _, err = sdk.AuthorizeSpace(GatewayAccAddress)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
+	fmt.Println("Gateway: ", GatewayURL)
+	for _, fileName := range FileNames {
+		fmt.Println("--------------Uploading " + fileName + " File--------------")
+		start := time.Now()
+
+		fileHash, err := sdk.UploadtoGateway(GatewayURL, Path+"/"+fileName, BucketName)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println("FID:", fileHash)
+		fmt.Println("File uploaded to Gateway in: ", time.Since(start))
+
+		saveFileHash(fileHash, fileName)
+
+		minerUploadTime := time.Now()
+
+		for {
+			bucketInfo, err := sdk.QueryBucketInfo(keyringPair.PublicKey, BucketName)
+			if err != nil {
+				panic(err)
+			}
+
+			if containsFilehash(bucketInfo.ObjectsList, fileHash) {
+				fmt.Println("File uploaded to Miners in: ", time.Since(minerUploadTime))
+
+				// Download File
+				fmt.Println("Downloading File...")
+				start = time.Now()
+
+				err := sdk.DownloadFromGateway(GatewayURL, fileHash, Workspace+"/"+fileHash+fileName)
+
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println("File dwonloaded in: ", time.Since(start))
+				break
+			} else {
+				_, err := sdk.QueryStorageOrder(fileHash)
+				if err != nil {
+					start = time.Now()
+					for {
+						time.Sleep(1 * time.Second)
+						_, err := sdk.QueryStorageOrder(fileHash)
+						if err == nil {
+							fmt.Println("Deal found in: ", time.Since(start))
+							break
+						}
+					}
+				}
+
+			}
+			// Hash not found try again after 10 sec
+			time.Sleep(10 * time.Second)
+		}
+		fmt.Println("--------------" + fileName + " Completed--------------")
+	}
+}
+
+func saveFileHash(fileHash string, fileName string) {
 	// Store File hashes in a file for future reference.
 	myfile, err := os.OpenFile(Workspace+"/filehashes.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -100,45 +162,10 @@ func main() {
 	loc, _ := time.LoadLocation("Asia/Kolkata")
 
 	// Write the string to the file
-	_, err = myfile.WriteString(fileHash + " " + time.Now().In(loc).String() + "\n")
+	_, err = myfile.WriteString(fileHash + " " + fileName + " " + time.Now().In(loc).String() + "\n")
 	if err != nil {
 		fmt.Println(err)
 		return
-	}
-
-	start = time.Now()
-
-	fmt.Println("Querrying Bucket Info...")
-	for {
-		bucketInfo, err := sdk.QueryBucketInfo(keyringPair.PublicKey, BucketName)
-		if err != nil {
-			panic(err)
-		}
-
-		if containsFilehash(bucketInfo.ObjectsList, fileHash) {
-			fmt.Println("File Uploaded in: ", time.Since(start))
-
-			// Download File
-			fmt.Println("Downloading File...")
-			start = time.Now()
-			err := sdk.RetrieveFile(fileHash, Workspace+"/"+fileHash+FileName)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("File Dwonloaded in: ", time.Since(start))
-
-			break
-		} else {
-			storageOrder, err := sdk.QueryStorageOrder(fileHash)
-			fmt.Println("File hash: ", fileHash)
-			fmt.Println("Storage Order: ", storageOrder)
-			if err != nil {
-				fmt.Println("Failed to query StorageDeal ", err)
-				break
-			}
-		}
-		// Hash not found try again after 10 sec
-		time.Sleep(30 * time.Second)
 	}
 }
 

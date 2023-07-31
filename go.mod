@@ -3,13 +3,13 @@ module example/cess_go_sdk
 go 1.20
 
 require (
-	github.com/CESSProject/cess-go-sdk v0.3.6
+	github.com/CESSProject/cess-go-sdk v0.3.9
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.16
 )
 
 require (
 	github.com/CESSProject/go-keyring v0.0.0-20220614131247-ee3a8da30fde // indirect
-	github.com/CESSProject/p2p-go v0.1.5 // indirect
+	github.com/CESSProject/p2p-go v0.1.7 // indirect
 	github.com/ChainSafe/go-schnorrkel v1.0.0 // indirect
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
