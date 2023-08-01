@@ -15,7 +15,7 @@ func init() {
 
 	loc, _ := time.LoadLocation("Asia/Kolkata")
 
-	var logpath = "./" + time.Now().In(loc).String() + ".log"
+	var logpath = "./logs/" + time.Now().In(loc).String() + ".log"
 
 	flag.Parse()
 	var file, err1 = os.OpenFile(logpath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -24,5 +24,5 @@ func init() {
 		panic(err1)
 	}
 	Log = log.New(file, "", log.LstdFlags|log.Lshortfile)
-	Log.Println("LogFile : " + logpath)
+	Log.Println("LogFile: " + logpath)
 }

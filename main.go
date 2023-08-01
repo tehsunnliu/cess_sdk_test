@@ -6,6 +6,7 @@ import (
 	"example/cess_go_sdk/logger"
 	"math/rand"
 	"os"
+	"strconv"
 	"time"
 
 	cess "github.com/CESSProject/cess-go-sdk"
@@ -18,11 +19,6 @@ import (
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-// Substrate well-known mnemonic:
-//
-//	https://github.com/substrate-developer-hub/substrate-developer-hub.github.io/issues/613
-var MY_MNEMONIC = "<ENTER_YOUR_SEED_HERE>"
 
 var RPC_ADDRS = []string{
 	"wss://testnet-rpc0.cess.cloud/ws/",
@@ -41,10 +37,14 @@ const FileName = "rand.txt"
 
 const BucketName = "random"
 const FileSize1MB = 1 * 1024 * 1024 // 1MB
-const MinFileSize = 1
-const MaxFileSize = 10
+const MinFileSize = 8
+const MaxFileSize = 9
 
-var Port = 4002
+var UploadCounter = 1
+var AverageUploadTime int64 = 0
+var AverageDownloadTime int64 = 0
+var AverageDealTime int64 = 0
+var Port = 4003
 
 var Bootstrap = []string{
 	"_dnsaddr.boot-kldr-testnet.cess.cloud", // Testnet
@@ -52,6 +52,11 @@ var Bootstrap = []string{
 }
 
 func main() {
+	myMnemonic := os.Getenv("CESS_MNEMONIC")
+	if len(myMnemonic) == 0 {
+		panic("Please set your Mnemonic seed, export CESS_MNEMONIC=<YOUR_SEED>")
+	}
+
 	if _, err := os.Stat(Workspace); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(Workspace, os.ModePerm)
 		if err != nil {
@@ -63,7 +68,7 @@ func main() {
 		context.Background(),
 		config.CharacterName_Client,
 		cess.ConnectRpcAddrs(RPC_ADDRS),
-		cess.Mnemonic(MY_MNEMONIC),
+		cess.Mnemonic(myMnemonic),
 		cess.TransactionTimeout(time.Second*10),
 		cess.Workspace(Workspace),
 		cess.P2pPort(Port),
@@ -73,45 +78,31 @@ func main() {
 		panic(err)
 	}
 
-	keyringPair, err := signature.KeyringPairFromSecret(MY_MNEMONIC, 0)
+	keyringPair, err := signature.KeyringPairFromSecret(myMnemonic, 0)
 	if err != nil {
 		panic(err)
 	}
 
 	createBucket(sdk, keyringPair.PublicKey)
 
-	_, err = sdk.AuthorizeSpace(GatewayAccAddress)
-	if err != nil {
-		panic(err)
-	}
-
-	logger.Log.Println("Gateway: ", GatewayURL)
+	logger.Log.Println("Gateway:", GatewayURL)
 	for {
 		loc, _ := time.LoadLocation("Asia/Kolkata")
-		logger.Log.Println("--------------Uploading File - " + time.Now().In(loc).String() + " --------------")
+		logger.Log.Println("--------Uploading File -", "#"+strconv.Itoa(+UploadCounter), "-", time.Now().In(loc).String(), "--------")
 
 		fileUrl := generateFile()
 		fileHash := uploadFile(sdk, fileUrl)
 		saveFileHash(fileHash, FileName)
 		verifyUploadAndDownloadFile(sdk, keyringPair.PublicKey, fileHash, FileName)
 
-		loc, _ = time.LoadLocation("Asia/Kolkata")
-		logger.Log.Println("--------------Completed - " + time.Now().In(loc).String() + " --------------")
+		UploadCounter++
 	}
-
-	// for _, fileName := range FileNames {
-	// 	logger.Log.Println("--------------Uploading " + fileName + " File--------------")
-	// 	fileHash := uploadFile(sdk, Path+"/"+fileName)
-	// 	saveFileHash(fileHash, fileName)
-	// 	verifyUploadAndDownloadFile(sdk, keyringPair.PublicKey, fileHash, fileName)
-	// 	logger.Log.Println("--------------" + fileName + " Completed--------------")
-	// }
 }
 
 func generateFile() string {
 	fileSize := (rand.Intn(MaxFileSize-MinFileSize) + MinFileSize) * FileSize1MB
 
-	logger.Log.Println("FileSize:", fileSize/(1024*1024), "MB")
+	logger.Log.Println("FileSize:", strconv.Itoa(fileSize/(1024*1024))+"MB")
 	data := RandStringBytes(fileSize)
 	fileUrl := Workspace + "/" + FileName
 	// Store File hashes in a file for future reference.
@@ -160,8 +151,14 @@ func verifyUploadAndDownloadFile(sdk sdk.SDK, publicKey []byte, fileHash string,
 		}
 
 		if containsFilehash(bucketInfo.ObjectsList, fileHash) {
-			logger.Log.Println("File uploaded to Miners in: ", time.Since(minerUploadTime))
+			uploadTime := time.Since(minerUploadTime)
+			if AverageUploadTime == 0 {
+				AverageUploadTime = uploadTime.Milliseconds()
+			} else {
+				AverageUploadTime = (AverageUploadTime + uploadTime.Milliseconds()) / 2
+			}
 
+			logger.Log.Println("File uploaded to Miners in:", uploadTime, "Avg.:", time.Duration(AverageUploadTime)*time.Millisecond)
 			downloadFile(sdk, fileHash, fileName)
 			break
 		} else {
@@ -172,7 +169,13 @@ func verifyUploadAndDownloadFile(sdk sdk.SDK, publicKey []byte, fileHash string,
 					time.Sleep(1 * time.Second)
 					_, err := sdk.QueryStorageOrder(fileHash)
 					if err == nil {
-						logger.Log.Println("Deal found in: ", time.Since(start))
+						dealTime := time.Since(start)
+						if AverageDealTime == 0 {
+							AverageDealTime = dealTime.Milliseconds()
+						} else {
+							AverageDealTime = (AverageDealTime + dealTime.Milliseconds()) / 2
+						}
+						logger.Log.Println("Deal found in:", dealTime, "Avg.:", time.Duration(AverageDealTime)*time.Millisecond)
 						break
 					}
 				}
@@ -185,29 +188,37 @@ func verifyUploadAndDownloadFile(sdk sdk.SDK, publicKey []byte, fileHash string,
 }
 
 func uploadFile(sdk sdk.SDK, fileUrl string) string {
+	_, err := sdk.AuthorizeSpace(GatewayAccAddress)
+	if err != nil {
+		panic(err)
+	}
 
 	start := time.Now()
-
 	fileHash, err := sdk.UploadtoGateway(GatewayURL, fileUrl, BucketName)
 	if err != nil {
 		logger.Log.Println(err)
 		panic(err)
 	}
 	logger.Log.Println("FID:", fileHash)
-	logger.Log.Println("File uploaded to Gateway in: ", time.Since(start))
+	logger.Log.Println("File uploaded to Gateway in:", time.Since(start))
 	return fileHash
 }
 
 func downloadFile(sdk sdk.SDK, fileHash string, fileName string) {
-	logger.Log.Println("Downloading File...")
 	start := time.Now()
 
-	err := sdk.DownloadFromGateway(GatewayURL, fileHash, Workspace+"/"+fileHash+fileName)
-
+	err := sdk.DownloadFromGateway(GatewayURL, fileHash, Workspace+"/"+fileHash+"_"+fileName)
 	if err != nil {
 		panic(err)
 	}
-	logger.Log.Println("File dwonloaded in: ", time.Since(start))
+	downloadTime := time.Since(start)
+	if AverageDownloadTime == 0 {
+		AverageDownloadTime = downloadTime.Milliseconds()
+	} else {
+		AverageDownloadTime = (AverageDownloadTime + downloadTime.Milliseconds()) / 2
+	}
+
+	logger.Log.Println("File dwonloaded in:", downloadTime, "Avg.:", time.Duration(AverageDownloadTime)*time.Millisecond)
 }
 
 func saveFileHash(fileHash string, fileName string) {
