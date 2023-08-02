@@ -25,11 +25,11 @@ var RPC_ADDRS = []string{
 	"wss://testnet-rpc1.cess.cloud/ws/",
 }
 
-var GatewayURL = "http://deoss-pub-gateway.cess.cloud/" // Public Gateway
-// var GatewayURL = "http://127.0.0.1:8080/" // Self hosted Gateway
+// var GatewayURL = "http://deoss-pub-gateway.cess.cloud/" // Public Gateway
+var GatewayURL = "http://127.0.0.1:8080/" // Self hosted Gateway
 
-var GatewayAccAddress = "cXhwBytXqrZLr1qM5NHJhCzEMckSTzNKw17ci2aHft6ETSQm9" // Public Gateway
-// var GatewayAccAddress = "cXiHsknbhePZEwxM92dEFzBNG9q2MkRoASXj5NczdWUDcrEzx" // Self hosted Gateway
+// var GatewayAccAddress = "cXhwBytXqrZLr1qM5NHJhCzEMckSTzNKw17ci2aHft6ETSQm9" // Public Gateway
+var GatewayAccAddress = "cXiHsknbhePZEwxM92dEFzBNG9q2MkRoASXj5NczdWUDcrEzx" // Self hosted Gateway
 
 const Path = "./TEST_FILES"
 const Workspace = "./CESS_STORAGE"
@@ -155,7 +155,7 @@ func verifyUploadAndDownloadFile(sdk sdk.SDK, publicKey []byte, fileHash string,
 			if AverageUploadTime == 0 {
 				AverageUploadTime = uploadTime.Milliseconds()
 			} else {
-				AverageUploadTime = (AverageUploadTime + uploadTime.Milliseconds()) / 2
+				AverageUploadTime = (AverageUploadTime*(int64(UploadCounter)-1) + uploadTime.Milliseconds()) / int64(UploadCounter)
 			}
 
 			logger.Log.Println("File uploaded to Miners in:", uploadTime, "Avg.:", time.Duration(AverageUploadTime)*time.Millisecond)
@@ -173,7 +173,7 @@ func verifyUploadAndDownloadFile(sdk sdk.SDK, publicKey []byte, fileHash string,
 						if AverageDealTime == 0 {
 							AverageDealTime = dealTime.Milliseconds()
 						} else {
-							AverageDealTime = (AverageDealTime + dealTime.Milliseconds()) / 2
+							AverageDealTime = (AverageDealTime*(int64(UploadCounter)-1) + dealTime.Milliseconds()) / int64(UploadCounter)
 						}
 						logger.Log.Println("Deal found in:", dealTime, "Avg.:", time.Duration(AverageDealTime)*time.Millisecond)
 						break
@@ -215,7 +215,7 @@ func downloadFile(sdk sdk.SDK, fileHash string, fileName string) {
 	if AverageDownloadTime == 0 {
 		AverageDownloadTime = downloadTime.Milliseconds()
 	} else {
-		AverageDownloadTime = (AverageDownloadTime + downloadTime.Milliseconds()) / 2
+		AverageDownloadTime = (AverageDownloadTime*(int64(UploadCounter)-1) + downloadTime.Milliseconds()) / int64(UploadCounter)
 	}
 
 	logger.Log.Println("File dwonloaded in:", downloadTime, "Avg.:", time.Duration(AverageDownloadTime)*time.Millisecond)
@@ -231,8 +231,13 @@ func saveFileHash(fileHash string, fileName string) {
 
 	loc, _ := time.LoadLocation("Asia/Kolkata")
 
+	gatewayType := "slf"
+	if GatewayAccAddress == "cXhwBytXqrZLr1qM5NHJhCzEMckSTzNKw17ci2aHft6ETSQm9" {
+		gatewayType = "pub"
+	}
+
 	// Write the string to the file
-	_, err = myfile.WriteString(fileHash + " " + fileName + " " + time.Now().In(loc).String() + "\n")
+	_, err = myfile.WriteString(fileHash + " " + gatewayType + " " + fileName + " " + time.Now().In(loc).String() + "\n")
 	if err != nil {
 		panic(err)
 	}
