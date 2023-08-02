@@ -41,6 +41,7 @@ const MinFileSize = 8
 const MaxFileSize = 9
 
 var UploadCounter = 1
+var AverageGatewayUploadTime int64 = 0
 var AverageUploadTime int64 = 0
 var AverageDownloadTime int64 = 0
 var AverageDealTime int64 = 0
@@ -199,8 +200,16 @@ func uploadFile(sdk sdk.SDK, fileUrl string) string {
 		logger.Log.Println(err)
 		panic(err)
 	}
+
+	uploadTime := time.Since(start)
+	if AverageGatewayUploadTime == 0 {
+		AverageGatewayUploadTime = uploadTime.Milliseconds()
+	} else {
+		AverageGatewayUploadTime = (AverageGatewayUploadTime*(int64(UploadCounter)-1) + uploadTime.Milliseconds()) / int64(UploadCounter)
+	}
+
 	logger.Log.Println("FID:", fileHash)
-	logger.Log.Println("File uploaded to Gateway in:", time.Since(start))
+	logger.Log.Println("File uploaded to Gateway in:", uploadTime, "Avg.:", time.Duration(AverageGatewayUploadTime)*time.Millisecond)
 	return fileHash
 }
 
