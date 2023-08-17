@@ -92,6 +92,12 @@ func main() {
 		logger.Log.Println("--------Uploading File -", "#"+strconv.Itoa(+UploadCounter), "-", time.Now().In(loc).String(), "--------")
 
 		fileUrl := generateFile()
+		file, err := os.Stat(fileUrl)
+		if err != nil {
+			panic(err)
+		}
+		logger.Log.Println("FileSize:", strconv.FormatInt(file.Size()/(1024*1024), 10)+"MB")
+
 		fileHash := uploadFile(sdk, fileUrl)
 		saveFileHash(fileHash, FileName)
 		verifyUploadAndDownloadFile(sdk, keyringPair.PublicKey, fileHash, FileName)
@@ -103,9 +109,15 @@ func main() {
 func generateFile() string {
 	fileSize := (rand.Intn(MaxFileSize-MinFileSize) + MinFileSize) * FileSize1MB
 
-	logger.Log.Println("FileSize:", strconv.Itoa(fileSize/(1024*1024))+"MB")
 	data := RandStringBytes(fileSize)
 	fileUrl := Workspace + "/" + FileName
+
+	// Remove file before creating
+	err := os.Remove(fileUrl)
+	if err != nil {
+		panic(err)
+	}
+
 	// Store File hashes in a file for future reference.
 	myfile, err := os.OpenFile(fileUrl, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -215,11 +227,12 @@ func uploadFile(sdk sdk.SDK, fileUrl string) string {
 
 func downloadFile(sdk sdk.SDK, fileHash string, fileName string) {
 	start := time.Now()
-
-	err := sdk.DownloadFromGateway(GatewayURL, fileHash, Workspace+"/"+fileHash+"_"+fileName)
+	file := Workspace + "/" + fileHash + "_" + fileName
+	err := sdk.DownloadFromGateway(GatewayURL, fileHash, file)
 	if err != nil {
 		panic(err)
 	}
+
 	downloadTime := time.Since(start)
 	if AverageDownloadTime == 0 {
 		AverageDownloadTime = downloadTime.Milliseconds()
@@ -228,6 +241,12 @@ func downloadFile(sdk sdk.SDK, fileHash string, fileName string) {
 	}
 
 	logger.Log.Println("File dwonloaded in:", downloadTime, "Avg.:", time.Duration(AverageDownloadTime)*time.Millisecond)
+
+	// Remove file after downloading
+	err = os.Remove(file)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func saveFileHash(fileHash string, fileName string) {
