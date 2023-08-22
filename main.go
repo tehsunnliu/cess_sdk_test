@@ -25,11 +25,11 @@ var RPC_ADDRS = []string{
 	"wss://testnet-rpc1.cess.cloud/ws/",
 }
 
-// var GatewayURL = "http://deoss-pub-gateway.cess.cloud/" // Public Gateway
-var GatewayURL = "http://127.0.0.1:8080/" // Self hosted Gateway
+var GatewayURL = "http://deoss-pub-gateway.cess.cloud/" // Public Gateway
+// var GatewayURL = "http://127.0.0.1:8080/" // Self hosted Gateway
 
-// var GatewayAccAddress = "cXhwBytXqrZLr1qM5NHJhCzEMckSTzNKw17ci2aHft6ETSQm9" // Public Gateway
-var GatewayAccAddress = "cXiHsknbhePZEwxM92dEFzBNG9q2MkRoASXj5NczdWUDcrEzx" // Self hosted Gateway
+var GatewayAccAddress = "cXhwBytXqrZLr1qM5NHJhCzEMckSTzNKw17ci2aHft6ETSQm9" // Public Gateway
+// var GatewayAccAddress = "cXiHsknbhePZEwxM92dEFzBNG9q2MkRoASXj5NczdWUDcrEzx" // Self hosted Gateway
 
 const Path = "./TEST_FILES"
 const Workspace = "./CESS_STORAGE"
@@ -207,7 +207,7 @@ func uploadFile(sdk sdk.SDK, fileUrl string) string {
 	}
 
 	start := time.Now()
-	fileHash, err := sdk.UploadtoGateway(GatewayURL, fileUrl, BucketName)
+	fileHash, err := sdk.StoreFile(GatewayURL, fileUrl, BucketName)
 	if err != nil {
 		logger.Log.Println(err)
 		panic(err)
@@ -228,7 +228,7 @@ func uploadFile(sdk sdk.SDK, fileUrl string) string {
 func downloadFile(sdk sdk.SDK, fileHash string, fileName string) {
 	start := time.Now()
 	file := Workspace + "/" + fileHash + "_" + fileName
-	err := sdk.DownloadFromGateway(GatewayURL, fileHash, file)
+	err := sdk.RetrieveFile(GatewayURL, fileHash, file)
 	if err != nil {
 		panic(err)
 	}
