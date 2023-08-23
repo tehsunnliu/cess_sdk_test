@@ -25,7 +25,7 @@ var RPC_ADDRS = []string{
 	"wss://testnet-rpc1.cess.cloud/ws/",
 }
 
-var GatewayURL = "http://deoss-pub-gateway.cess.cloud/" // Public Gateway
+var GatewayURL = "http://139.224.19.104:8080" // Public Gateway
 // var GatewayURL = "http://127.0.0.1:8080/" // Self hosted Gateway
 
 var GatewayAccAddress = "cXhwBytXqrZLr1qM5NHJhCzEMckSTzNKw17ci2aHft6ETSQm9" // Public Gateway
@@ -37,8 +37,8 @@ const FileName = "rand.txt"
 
 const BucketName = "random"
 const FileSize1MB = 1 * 1024 * 1024 // 1MB
-const MinFileSize = 8
-const MaxFileSize = 9
+const MinFileSize = 1
+const MaxFileSize = 2
 
 var UploadCounter = 1
 var AverageGatewayUploadTime int64 = 0
