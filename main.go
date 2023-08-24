@@ -25,7 +25,7 @@ var RPC_ADDRS = []string{
 	"wss://testnet-rpc1.cess.cloud/ws/",
 }
 
-var GatewayURL = "http://139.224.19.104:8080" // Public Gateway
+var GatewayURL = "http://deoss-pub-gateway.cess.cloud/" // Public Gateway
 // var GatewayURL = "http://127.0.0.1:8080/" // Self hosted Gateway
 
 var GatewayAccAddress = "cXhwBytXqrZLr1qM5NHJhCzEMckSTzNKw17ci2aHft6ETSQm9" // Public Gateway
@@ -113,10 +113,7 @@ func generateFile() string {
 	fileUrl := Workspace + "/" + FileName
 
 	// Remove file before creating
-	err := os.Remove(fileUrl)
-	if err != nil {
-		panic(err)
-	}
+	_ = os.Remove(fileUrl)
 
 	// Store File hashes in a file for future reference.
 	myfile, err := os.OpenFile(fileUrl, os.O_CREATE|os.O_WRONLY, 0644)
