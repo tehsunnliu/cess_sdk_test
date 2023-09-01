@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"os"
@@ -13,9 +14,16 @@ var (
 
 func init() {
 
-	loc, _ := time.LoadLocation("Asia/Kolkata")
+	var logpath = "./logs/"
+	if _, err := os.Stat(logpath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(logpath, os.ModePerm)
+		if err != nil {
+			log.Println(err)
+		}
+	}
 
-	var logpath = "./logs/" + time.Now().In(loc).String() + ".log"
+	loc, _ := time.LoadLocation("Asia/Kolkata")
+	logpath += time.Now().In(loc).String() + ".log"
 
 	flag.Parse()
 	var file, err1 = os.OpenFile(logpath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

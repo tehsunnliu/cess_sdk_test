@@ -61,7 +61,7 @@ func main() {
 	if _, err := os.Stat(Workspace); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(Workspace, os.ModePerm)
 		if err != nil {
-			logger.Log.Println(err)
+			logger.Log.Panic("Error:", err)
 		}
 	}
 
@@ -76,12 +76,12 @@ func main() {
 		cess.Bootnodes(Bootstrap),
 	)
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 
 	keyringPair, err := signature.KeyringPairFromSecret(myMnemonic, 0)
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 
 	createBucket(sdk, keyringPair.PublicKey)
@@ -94,7 +94,8 @@ func main() {
 		fileUrl := generateFile()
 		file, err := os.Stat(fileUrl)
 		if err != nil {
-			panic(err)
+			logger.Log.Panic("Error:", err)
+
 		}
 		logger.Log.Println("FileSize:", strconv.FormatInt(file.Size()/(1024*1024), 10)+"MB")
 
@@ -118,14 +119,14 @@ func generateFile() string {
 	// Store File hashes in a file for future reference.
 	myfile, err := os.OpenFile(fileUrl, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 	defer myfile.Close()
 
 	// Write the string to the file
 	_, err = myfile.WriteString(data)
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 	return fileUrl
 }
@@ -137,14 +138,14 @@ func createBucket(sdk sdk.SDK, publicKey []byte) {
 
 	bucketList, err := sdk.QueryAllBucketName(publicKey)
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 
 	if !containsBucket(bucketList, BucketName) {
 		logger.Log.Println("Creating bucket...")
 		tx, err := sdk.CreateBucket(publicKey, BucketName)
 		if err != nil {
-			panic(err)
+			logger.Log.Panic("Error:", err)
 		}
 
 		logger.Log.Println("Bucket ID: ", tx)
@@ -157,7 +158,7 @@ func verifyUploadAndDownloadFile(sdk sdk.SDK, publicKey []byte, fileHash string,
 	for {
 		bucketInfo, err := sdk.QueryBucketInfo(publicKey, BucketName)
 		if err != nil {
-			panic(err)
+			logger.Log.Panic("Error:", err)
 		}
 
 		if containsFilehash(bucketInfo.ObjectsList, fileHash) {
@@ -200,14 +201,12 @@ func verifyUploadAndDownloadFile(sdk sdk.SDK, publicKey []byte, fileHash string,
 func uploadFile(sdk sdk.SDK, fileUrl string) string {
 	_, err := sdk.AuthorizeSpace(GatewayAccAddress)
 	if err != nil {
-		panic(err)
 	}
 
 	start := time.Now()
 	fileHash, err := sdk.StoreFile(GatewayURL, fileUrl, BucketName)
 	if err != nil {
-		logger.Log.Println(err)
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 
 	uploadTime := time.Since(start)
@@ -227,7 +226,7 @@ func downloadFile(sdk sdk.SDK, fileHash string, fileName string) {
 	file := Workspace + "/" + fileHash + "_" + fileName
 	err := sdk.RetrieveFile(GatewayURL, fileHash, file)
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 
 	downloadTime := time.Since(start)
@@ -242,7 +241,7 @@ func downloadFile(sdk sdk.SDK, fileHash string, fileName string) {
 	// Remove file after downloading
 	err = os.Remove(file)
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 }
 
@@ -250,7 +249,7 @@ func saveFileHash(fileHash string, fileName string) {
 	// Store File hashes in a file for future reference.
 	myfile, err := os.OpenFile(Workspace+"/filehashes.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 	defer myfile.Close()
 
@@ -264,7 +263,7 @@ func saveFileHash(fileHash string, fileName string) {
 	// Write the string to the file
 	_, err = myfile.WriteString(fileHash + " " + gatewayType + " " + fileName + " " + time.Now().In(loc).String() + "\n")
 	if err != nil {
-		panic(err)
+		logger.Log.Panic("Error:", err)
 	}
 }
 
