@@ -39,6 +39,7 @@ const BucketName = "random"
 const FileSize1MB = 1 * 1024 * 1024 // 1MB
 const MinFileSize = 1
 const MaxFileSize = 2
+const MaxIterations = 10
 
 var UploadCounter = 1
 var AverageGatewayUploadTime int64 = 0
@@ -87,7 +88,7 @@ func main() {
 	createBucket(sdk, keyringPair.PublicKey)
 
 	logger.Log.Println("Gateway:", GatewayURL)
-	for {
+	for i := 0; i < MaxIterations; i++ {
 		loc, _ := time.LoadLocation("Asia/Kolkata")
 		logger.Log.Println("--------Uploading File -", "#"+strconv.Itoa(+UploadCounter), "-", time.Now().In(loc).String(), "--------")
 
