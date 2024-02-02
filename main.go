@@ -10,10 +10,11 @@ import (
 	"time"
 
 	cess "github.com/CESSProject/cess-go-sdk"
-	"github.com/CESSProject/cess-go-sdk/config"
+	// "github.com/CESSProject/cess-go-sdk/config"
 	"github.com/CESSProject/cess-go-sdk/core/pattern"
 	"github.com/CESSProject/cess-go-sdk/core/sdk"
-	"github.com/CESSProject/cess-go-sdk/core/utils"
+
+	// "github.com/CESSProject/cess-go-sdk/core/utils"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
@@ -23,6 +24,7 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 var RPC_ADDRS = []string{
 	"wss://testnet-rpc0.cess.cloud/ws/",
 	"wss://testnet-rpc1.cess.cloud/ws/",
+	"wss://testnet-rpc2.cess.cloud/ws/",
 }
 
 var GatewayURL = "http://deoss-pub-gateway.cess.cloud/" // Public Gateway
@@ -36,7 +38,7 @@ const Workspace = "./CESS_STORAGE"
 const FileName = "rand.txt"
 
 const BucketName = "random"
-const FileSize1MB = 1 * 1024 * 1024 // 1MB
+const FileSize1MB = 64 * 1024 * 1024 // 1MB
 const MinFileSize = 1
 const MaxFileSize = 2
 const MaxIterations = 10
@@ -51,6 +53,7 @@ var Port = 4003
 var Bootstrap = []string{
 	"_dnsaddr.boot-kldr-testnet.cess.cloud", // Testnet
 	// "_dnsaddr.bootstrap-kldr.cess.cloud", // Devnet
+	"_dnsaddr.boot-bucket-testnet.cess.cloud",
 }
 
 func main() {
@@ -68,13 +71,13 @@ func main() {
 
 	sdk, err := cess.New(
 		context.Background(),
-		config.CharacterName_Client,
+		// config.CharacterName_Client,
 		cess.ConnectRpcAddrs(RPC_ADDRS),
 		cess.Mnemonic(myMnemonic),
 		cess.TransactionTimeout(time.Second*10),
-		cess.Workspace(Workspace),
-		cess.P2pPort(Port),
-		cess.Bootnodes(Bootstrap),
+		// cess.Workspace(Workspace),
+		// cess.P2pPort(Port),
+		// cess.Bootnodes(Bootstrap),
 	)
 	if err != nil {
 		logger.Log.Panic("Error:", err)
@@ -133,11 +136,11 @@ func generateFile() string {
 }
 
 func createBucket(sdk sdk.SDK, publicKey []byte) {
-	if !utils.CheckBucketName(BucketName) {
-		panic("invalid bucket name")
-	}
+	// if !sdk.CheckBucketName(BucketName) {
+	// 	panic("invalid bucket name")
+	// }
 
-	bucketList, err := sdk.QueryAllBucketName(publicKey)
+	bucketList, err := sdk.QueryAllBucketString(publicKey)
 	if err != nil {
 		logger.Log.Panic("Error:", err)
 	}
