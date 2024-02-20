@@ -38,7 +38,7 @@ const Workspace = "./CESS_STORAGE"
 const FileName = "rand.txt"
 
 const BucketName = "random"
-const FileSize1MB = 64 * 1024 * 1024 // 1MB
+const FileSize1MB = 1 * 1024 * 1024 // 1MB
 const MinFileSize = 1
 const MaxFileSize = 2
 const MaxIterations = 10
@@ -105,8 +105,9 @@ func main() {
 
 		fileHash := uploadFile(sdk, fileUrl)
 		saveFileHash(fileHash, FileName)
-		verifyUploadAndDownloadFile(sdk, keyringPair.PublicKey, fileHash, FileName)
-
+		// verifyUploadAndDownloadFile(sdk, keyringPair.PublicKey, fileHash, FileName)
+		
+		downloadFile(sdk, fileHash, fileName)
 		UploadCounter++
 	}
 }
