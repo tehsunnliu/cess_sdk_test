@@ -39,8 +39,8 @@ const FileName = "rand.txt"
 
 const BucketName = "random"
 const FileSize1MB = 1 * 1024 * 1024 // 1MB
-const MinFileSize = 1
-const MaxFileSize = 2
+const MinFileSize = 64
+const MaxFileSize = 65
 const MaxIterations = 10
 
 var UploadCounter = 1
@@ -106,8 +106,8 @@ func main() {
 		fileHash := uploadFile(sdk, fileUrl)
 		saveFileHash(fileHash, FileName)
 		// verifyUploadAndDownloadFile(sdk, keyringPair.PublicKey, fileHash, FileName)
-		
-		downloadFile(sdk, fileHash, fileName)
+
+		downloadFile(sdk, fileHash, FileName)
 		UploadCounter++
 	}
 }
